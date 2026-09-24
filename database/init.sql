@@ -1,8 +1,5 @@
 BEGIN;
 
--- ============================================================
--- 1. USUÁRIOS
--- ============================================================
 CREATE TABLE IF NOT EXISTS usuarios (
     id BIGSERIAL PRIMARY KEY,
     nome VARCHAR(150) NOT NULL,
@@ -15,9 +12,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
     atualizado_em TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- ============================================================
--- 2. LIVROS
--- ============================================================
+
 CREATE TABLE IF NOT EXISTS livros (
     id BIGSERIAL PRIMARY KEY,
     titulo VARCHAR(255) NOT NULL,
@@ -28,9 +23,7 @@ CREATE TABLE IF NOT EXISTS livros (
     atualizado_em TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- ============================================================
--- 3. EMPRÉSTIMOS
--- ============================================================
+
 CREATE TABLE IF NOT EXISTS emprestimos (
     id BIGSERIAL PRIMARY KEY,
     usuario_id BIGINT NOT NULL,
@@ -53,7 +46,7 @@ CREATE TABLE IF NOT EXISTS emprestimos (
         CHECK (data_devolucao IS NULL OR data_devolucao >= data_emprestimo)
 );
 
--- Impede mais de um empréstimo ativo do mesmo livro.
+
 CREATE UNIQUE INDEX IF NOT EXISTS uq_emprestimo_livro_ativo
     ON emprestimos (livro_id)
     WHERE status = 'ativo';
@@ -67,9 +60,7 @@ CREATE INDEX IF NOT EXISTS idx_emprestimos_livro
 CREATE INDEX IF NOT EXISTS idx_emprestimos_status
     ON emprestimos (status);
 
--- ============================================================
--- 4. NOTIFICAÇÕES
--- ============================================================
+
 CREATE TABLE IF NOT EXISTS notificacoes (
     id BIGSERIAL PRIMARY KEY,
     usuario_id BIGINT,
@@ -88,9 +79,7 @@ CREATE TABLE IF NOT EXISTS notificacoes (
         ON UPDATE CASCADE ON DELETE SET NULL
 );
 
--- ============================================================
--- 5. LOGS DE OPERAÇÕES
--- ============================================================
+
 CREATE TABLE IF NOT EXISTS logs_operacoes (
     id BIGSERIAL PRIMARY KEY,
     usuario_id BIGINT,
