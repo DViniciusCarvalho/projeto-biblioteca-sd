@@ -1,0 +1,95 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: biblioteca-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-biblioteca}
+      POSTGRES_USER: ${POSTGRES_USER:-biblioteca_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-biblioteca_pass}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-biblioteca_user} -d ${POSTGRES_DB:-biblioteca}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  users:
+    build:
+      context: ./services/users
+    container_name: biblioteca-users
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-biblioteca_user}:${POSTGRES_PASSWORD:-biblioteca_pass}@postgres:5432/${POSTGRES_DB:-biblioteca}
+    ports:
+      - "8001:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  books:
+    build:
+      context: ./services/books
+    container_name: biblioteca-books
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-biblioteca_user}:${POSTGRES_PASSWORD:-biblioteca_pass}@postgres:5432/${POSTGRES_DB:-biblioteca}
+    ports:
+      - "8002:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  loans:
+    build:
+      context: ./services/loans
+    container_name: biblioteca-loans
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-biblioteca_user}:${POSTGRES_PASSWORD:-biblioteca_pass}@postgres:5432/${POSTGRES_DB:-biblioteca}
+      USERS_SERVICE_URL: http://users:8000
+      BOOKS_SERVICE_URL: http://books:8000
+      NOTIFICATIONS_SERVICE_URL: http://notifications:8000
+    ports:
+      - "8003:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      users:
+        condition: service_started
+      books:
+        condition: service_started
+
+  notifications:
+    build:
+      context: ./services/notifications
+    container_name: biblioteca-notifications
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-biblioteca_user}:${POSTGRES_PASSWORD:-biblioteca_pass}@postgres:5432/${POSTGRES_DB:-biblioteca}
+    ports:
+      - "8004:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  gateway:
+    image: nginx:1.27-alpine
+    container_name: biblioteca-gateway
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - users
+      - books
+      - loans
+      - notifications
+
+volumes:
+  postgres_data:
